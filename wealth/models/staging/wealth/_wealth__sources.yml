@@ -1,0 +1,33 @@
+version: 2
+sources:
+- name: wealth
+  description: 'Wealth client book (RAW_WEALTH): clients, portfolios and trades.'
+  schema: raw_wealth
+  tables:
+  - name: clients
+    description: One row per wealth client. Client ids are not banking or insurance ids.
+    config:
+      loaded_at_field: loaded_at
+      freshness:
+        warn_after:
+          count: 100000
+          period: hour
+    columns:
+    - name: client_id
+      data_tests:
+      - unique
+      - not_null
+  - name: portfolios
+    description: One row per portfolio. Open market value is assets under management.
+    columns:
+    - name: portfolio_id
+      data_tests:
+      - unique
+      - not_null
+  - name: trades
+    description: One row per executed trade with its fee.
+    columns:
+    - name: trade_id
+      data_tests:
+      - unique
+      - not_null
