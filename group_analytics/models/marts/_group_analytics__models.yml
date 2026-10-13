@@ -1,0 +1,412 @@
+version: 2
+models:
+- name: dim_customer_360
+  description: >-
+    Public group customer 360. One row per party_key, built only from cross-project refs to banking, insurance,
+    wealth and financials. customer_id_hash uses platform.anonymize.
+  config:
+    access: public
+    contract:
+      enforced: true
+  semantic_model:
+    enabled: true
+  agg_time_dimension: as_of_date
+  data_tests:
+  - dbt_expectations.expect_table_row_count_to_be_between:
+      arguments:
+        min_value: 25
+        max_value: 40
+  columns:
+  - name: customer_id
+    description: Group party key (P-…).
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+    - dbt_expectations.expect_column_values_to_match_regex:
+        arguments:
+          regex: ^P-[0-9]{4}$
+    entity:
+      type: primary
+      name: customer
+  - name: customer_id_hash
+    description: Anonymized party key.
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+  - name: banking_customer_id
+    data_type: varchar
+  - name: banking_status
+    data_type: varchar
+    dimension:
+      type: categorical
+  - name: customer_type
+    data_type: varchar
+    dimension:
+      type: categorical
+  - name: account_count
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: loan_count
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: loan_balance
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: loan_arrears
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: insurance_customer_id
+    data_type: varchar
+  - name: insurance_status
+    data_type: varchar
+    dimension:
+      type: categorical
+  - name: active_policy_count
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: annual_premium
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: open_claim_count
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: claims_paid
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: wealth_customer_id
+    data_type: varchar
+  - name: wealth_status
+    data_type: varchar
+    dimension:
+      type: categorical
+  - name: portfolio_count
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: assets_under_management
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: wealth_fees_12m
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: total_revenue
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: total_cost
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: total_profit
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: profit_months
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: profit_band
+    data_type: varchar
+    dimension:
+      type: categorical
+  - name: domain_count
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: has_churn
+    description: True when the party exited during the year (banking customer_exits).
+    data_type: boolean
+    constraints:
+    - type: not_null
+    data_tests:
+    - not_null
+  - name: churn_reason
+    data_type: varchar
+  - name: as_of_date
+    data_type: date
+    constraints:
+    - type: not_null
+    granularity: day
+    dimension:
+      type: time
+  metrics:
+  - name: customers
+    description: Parties on the customer 360.
+    label: Customers
+    type: simple
+    agg: count
+    expr: '1'
+  - name: total_revenue
+    description: Sum of total_revenue.
+    label: Total revenue
+    type: simple
+    agg: sum
+    expr: total_revenue
+  - name: total_profit
+    description: Sum of total_profit.
+    label: Total profit
+    type: simple
+    agg: sum
+    expr: total_profit
+  - name: assets_under_management
+    description: Sum of assets under management.
+    label: AUM
+    type: simple
+    agg: sum
+    expr: assets_under_management
+- name: fct_customer_monthly
+  description: 'Public monthly activity per party: profit, banking flows, claims and wealth fees.'
+  config:
+    access: public
+    contract:
+      enforced: true
+  semantic_model:
+    enabled: true
+  agg_time_dimension: activity_month
+  columns:
+  - name: customer_month_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+    entity:
+      type: primary
+      name: customer_month
+  - name: customer_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('dim_customer_360')
+          field: customer_id
+    entity:
+      type: foreign
+      name: customer
+  - name: activity_month
+    data_type: date
+    constraints:
+    - type: not_null
+    granularity: month
+    dimension:
+      type: time
+  - name: revenue
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: cost
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: profit
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+    data_tests:
+    - platform.sums_match:
+        description: Cross-project reconciliation with the financials project.
+        arguments:
+          compare_model: ref('op_financials', 'fct_customer_profitability_monthly')
+          compare_column: profit
+  - name: banking_net_flow
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: banking_transactions
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: claims_reported
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: claims_paid
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: wealth_net_investment
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: wealth_fees
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  metrics:
+  - name: monthly_profit
+    description: Sum of profit by month.
+    label: Monthly profit
+    type: simple
+    agg: sum
+    expr: profit
+  - name: monthly_claims_paid
+    description: Sum of claims_paid by month.
+    label: Claims paid
+    type: simple
+    agg: sum
+    expr: claims_paid
+- name: dim_customer_segments
+  description: Public value segments, cross-sell flags and next best action per party.
+  config:
+    access: public
+    contract:
+      enforced: true
+  columns:
+  - name: customer_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_customer_360')
+          field: customer_id
+  - name: value_segment
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - private
+          - affluent
+          - mass
+  - name: is_insurance_prospect
+    data_type: boolean
+    constraints:
+    - type: not_null
+  - name: is_wealth_prospect
+    data_type: boolean
+    constraints:
+    - type: not_null
+  - name: is_credit_watch
+    data_type: boolean
+    constraints:
+    - type: not_null
+  - name: next_best_action
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - exit_review
+          - collections_contact
+          - introduce_wealth
+          - offer_insurance
+          - retain
+- name: fct_customer_churn
+  description: >-
+    Python logistic regression. The label is dim_customer_360.has_churn; inputs are profit, domain count
+    and product holdings, not the churn flag.
+  config:
+    access: public
+  columns:
+  - name: customer_id
+    description: One prediction per dim_customer_360 row.
+    data_tests:
+    - unique
+    - not_null
+  - name: churn_probability
+    data_type: numeric(6,4)
+    data_tests:
+    - not_null
+  - name: predicted_churn
+    data_type: boolean
+    data_tests:
+    - not_null
+  - name: has_churn
+    data_type: boolean
+    data_tests:
+    - not_null
+  - name: strongest_feature
+    data_tests:
+    - not_null
+  - name: model_intercept
+    data_type: numeric(8,4)
+    data_tests:
+    - not_null
+- name: time_spine_daily
+  description: Day spine for the Semantic Layer, built with the platform date_spine macro.
+  config:
+    access: protected
+  time_spine:
+    standard_granularity_column: date_day
+  columns:
+  - name: date_day
+    description: Calendar day.
+    data_type: date
+    data_tests:
+    - unique
+    - not_null
+    granularity: day
+unit_tests:
+- name: test_next_best_action_priority
+  model: dim_customer_segments
+  given:
+  - input: ref('dim_customer_360')
+    rows:
+    - customer_id: A
+      banking_customer_id: B1
+      insurance_customer_id: null
+      wealth_customer_id: null
+      assets_under_management: 0
+      loan_balance: 10000
+      loan_arrears: 300
+      banking_status: active
+      total_profit: 9000
+      has_churn: false
+    - customer_id: B
+      banking_customer_id: B2
+      insurance_customer_id: I2
+      wealth_customer_id: null
+      assets_under_management: 0
+      loan_balance: 20000
+      loan_arrears: 0
+      banking_status: active
+      total_profit: 9000
+      has_churn: false
+    - customer_id: C
+      banking_customer_id: B3
+      insurance_customer_id: I3
+      wealth_customer_id: W3
+      assets_under_management: 2000000
+      loan_balance: 0
+      loan_arrears: 0
+      banking_status: closed
+      total_profit: 100
+      has_churn: true
+  expect:
+    rows:
+    - customer_id: A
+      value_segment: mass
+      next_best_action: collections_contact
+    - customer_id: B
+      value_segment: mass
+      next_best_action: introduce_wealth
+    - customer_id: C
+      value_segment: private
+      next_best_action: exit_review
