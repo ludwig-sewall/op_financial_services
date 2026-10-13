@@ -1,0 +1,4 @@
+version: 2
+data_tests:
+- name: assert_public_models_not_empty
+  description: 'Templated with a Jinja loop: fails for any public model in this project that is empty.'
