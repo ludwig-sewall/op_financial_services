@@ -1,0 +1,131 @@
+version: 2
+models:
+- name: stg_banking__customers
+  description: Banking customers. Source statuses are single letters (A/I/C/F); the CASE decodes them.
+  columns:
+  - name: banking_customer_id
+    description: Bank customer key from the core system.
+    data_tests:
+    - unique
+    - not_null
+  - name: party_key
+    description: Group party key.
+    data_tests:
+    - unique
+    - not_null
+  - name: customer_status
+    description: Decoded lifecycle status.
+  - name: full_name
+  - name: customer_type
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - individual
+          - business
+  - name: customer_since
+  - name: loaded_at
+- name: stg_banking__customer_exits
+  description: >-
+    Relationship exits recorded by the retention team, with reason. Renamed, typed and decoded; one row
+    per source row.
+  columns:
+  - name: exit_id
+    data_tests:
+    - unique
+    - not_null
+  - name: banking_customer_id
+    data_tests:
+    - unique
+    - not_null
+  - name: exit_date
+  - name: exit_reason
+- name: stg_banking__accounts
+  description: >-
+    One row per deposit or card account. Closed accounts stay in the book. Renamed, typed and decoded;
+    one row per source row.
+  columns:
+  - name: account_id
+    data_tests:
+    - unique
+    - not_null
+  - name: banking_customer_id
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('stg_banking__customers')
+          field: banking_customer_id
+  - name: account_status
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - open
+          - closed
+  - name: product_name
+  - name: opened_date
+  - name: currency
+- name: stg_banking__transactions
+  description: >-
+    One row per posted account transaction. Renamed, typed and decoded; one row per source row.
+  columns:
+  - name: transaction_id
+    data_tests:
+    - unique
+    - not_null
+  - name: account_id
+    data_tests:
+    - not_null
+  - name: transaction_date
+  - name: transaction_type
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - credit
+          - debit
+  - name: channel
+  - name: amount
+    data_tests:
+    - platform.non_negative
+- name: stg_banking__loans
+  description: One row per loan facility. Renamed, typed and decoded; one row per source row.
+  columns:
+  - name: loan_id
+    data_tests:
+    - unique
+    - not_null
+  - name: banking_customer_id
+    data_tests:
+    - not_null
+  - name: loan_status
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - outstanding
+          - closed
+  - name: balance
+    description: Outstanding principal.
+  - name: product_name
+  - name: interest_rate
+  - name: origination_date
+  - name: monthly_payment
+- name: stg_banking__loan_repayments
+  description: >-
+    Scheduled monthly instalments; paid_date is null when the instalment was missed. Renamed, typed and
+    decoded; one row per source row.
+  columns:
+  - name: repayment_id
+    data_tests:
+    - unique
+    - not_null
+  - name: loan_id
+    data_tests:
+    - not_null
+  - name: due_date
+  - name: paid_date
+  - name: amount_due
+  - name: amount_paid
+    data_tests:
+    - platform.non_negative
