@@ -1,0 +1,310 @@
+version: 2
+models:
+- name: dim_banking_customers
+  description: >-
+    Public banking customer. Grain is one row per banking customer. party_key is the group key the customer
+    360 uses to line this book up with insurance and wealth. Downstream projects should ref this model
+    rather than the banking raw sources.
+  config:
+    access: public
+    contract:
+      enforced: true
+  columns:
+  - name: banking_customer_id
+    description: Bank customer key from the core system.
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+    - dbt_expectations.expect_column_values_to_match_regex:
+        arguments:
+          regex: ^B-[0-9]{4}$
+  - name: party_key
+    description: Group party key. One banking customer maps to one party.
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+    - dbt_expectations.expect_column_values_to_match_regex:
+        arguments:
+          regex: ^P-[0-9]{4}$
+  - name: customer_status
+    description: Lifecycle of the banking relationship.
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - not_null
+    - accepted_values:
+        description: >-
+          Workshop exercise: source statuses are single letters (A/I/C/F). The starting CASE in stg_banking__customers
+          maps A/I/C only, so F fails until you add "when customer_status = 'F' then 'frozen'".
+        config:
+          severity: warn
+        arguments:
+          values:
+          - active
+          - inactive
+          - closed
+          - frozen
+  - name: customer_type
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - individual
+          - business
+  - name: customer_since
+    data_type: date
+    constraints:
+    - type: not_null
+  - name: exit_date
+    description: Date the relationship ended, from customer_exits.
+    data_type: date
+  - name: exit_reason
+    data_type: varchar
+- name: dim_banking_accounts
+  description: Public account dimension.
+  config:
+    access: public
+    contract:
+      enforced: true
+  columns:
+  - name: account_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+  - name: banking_customer_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('dim_banking_customers')
+          field: banking_customer_id
+  - name: product_name
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: account_status
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: opened_date
+    data_type: date
+    constraints:
+    - type: not_null
+  - name: currency
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: is_open
+    data_type: boolean
+    constraints:
+    - type: not_null
+- name: fct_banking_holdings
+  description: >-
+    Public product holdings for each banking customer. Grain is one row per banking customer, including
+    customers with no open accounts or loans.
+  config:
+    access: public
+    contract:
+      enforced: true
+  data_tests:
+  - dbt_utils.equal_rowcount:
+      arguments:
+        compare_model: ref('dim_banking_customers')
+  columns:
+  - name: banking_customer_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_banking_customers')
+          field: banking_customer_id
+  - name: account_count
+    description: Open deposit and card accounts.
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: loan_count
+    description: Loan facilities still outstanding.
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: loan_balance
+    description: Sum of outstanding principal.
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+- name: fct_banking_account_monthly
+  description: Public account cash flows by month.
+  config:
+    access: public
+    contract:
+      enforced: true
+  data_tests:
+  - dbt_utils.expression_is_true:
+      arguments:
+        expression: net_flow = inflow - outflow
+  columns:
+  - name: account_month_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+  - name: account_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('dim_banking_accounts')
+          field: account_id
+  - name: banking_customer_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: product_name
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: transaction_month
+    data_type: date
+    constraints:
+    - type: not_null
+  - name: transaction_count
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: inflow
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+    data_tests:
+    - platform.non_negative
+    - dbt_utils.not_constant
+  - name: outflow
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+    data_tests:
+    - platform.non_negative
+  - name: net_flow
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+- name: fct_banking_loan_performance
+  description: 'Public loan performance: arrears, late payments and delinquency bucket.'
+  config:
+    access: public
+    contract:
+      enforced: true
+  data_tests:
+  - dbt_utils.expression_is_true:
+      description: 'Credit watch threshold: a few loans in arrears warn; more than eight fail the build.'
+      config:
+        severity: error
+        warn_if: '>0'
+        error_if: '>8'
+      arguments:
+        expression: not is_in_arrears
+  columns:
+  - name: loan_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+  - name: banking_customer_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('dim_banking_customers')
+          field: banking_customer_id
+  - name: product_name
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: loan_status
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: outstanding_balance
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: interest_rate
+    data_type: numeric(18,4)
+    constraints:
+    - type: not_null
+    data_tests:
+    - platform.in_range:
+        arguments:
+          min_value: 0
+          max_value: 0.25
+  - name: monthly_payment
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: instalments_due
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: instalments_missed
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: instalments_late
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: arrears_amount
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+    data_tests:
+    - platform.non_negative
+    - dbt_utils.accepted_range:
+        arguments:
+          min_value: 0.01
+        config:
+          where: is_in_arrears
+  - name: delinquency_bucket
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - current
+          - 1-30
+          - 31-90
+          - 90+
+  - name: is_in_arrears
+    data_type: boolean
+    constraints:
+    - type: not_null
