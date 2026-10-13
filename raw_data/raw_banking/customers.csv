@@ -1,0 +1,27 @@
+banking_customer_id,party_key,customer_status,full_name,customer_type,customer_since,loaded_at
+B-1001,P-1001,A,Elena Voss,individual,2017-01-19,2026-03-31 00:00:00
+B-1002,P-1002,A,Jonas Berg,individual,2017-05-25,2026-03-31 00:00:00
+B-1004,P-1004,A,Marcus Okonkwo,individual,2022-04-25,2026-03-31 00:00:00
+B-1005,P-1005,C,Sofia Lind,individual,2014-03-22,2026-03-31 00:00:00
+B-1006,P-1006,A,Chen Wei,individual,2024-02-23,2026-03-31 00:00:00
+B-1008,P-1008,A,Noah Keller,individual,2017-12-09,2026-03-31 00:00:00
+B-1009,P-1009,F,Priya Shah,individual,2015-10-20,2026-03-31 00:00:00
+B-1010,P-1010,I,Harbor Logistics,business,2023-10-30,2026-03-31 00:00:00
+B-1012,P-1012,A,Tomás Álvarez,individual,2014-01-17,2026-03-31 00:00:00
+B-1013,P-1013,A,Freya Nilsen,individual,2018-08-01,2026-03-31 00:00:00
+B-1014,P-1014,A,Omar Farouk,individual,2022-01-02,2026-03-31 00:00:00
+B-1015,P-1015,A,Ingrid Bakker,individual,2011-11-18,2026-03-31 00:00:00
+B-1016,P-1016,A,Nordic Retail AB,business,2011-10-15,2026-03-31 00:00:00
+B-1017,P-1017,A,Yuki Tanaka,individual,2014-12-04,2026-03-31 00:00:00
+B-1018,P-1018,I,Camille Dubois,individual,2019-05-23,2026-03-31 00:00:00
+B-1019,P-1019,A,Erik Johansson,individual,2021-04-27,2026-03-31 00:00:00
+B-1020,P-1020,A,Aisha Mensah,individual,2017-09-18,2026-03-31 00:00:00
+B-1021,P-1021,A,Baltic Freight Oy,business,2013-05-15,2026-03-31 00:00:00
+B-1022,P-1022,C,Hannah Price,individual,2017-12-13,2026-03-31 00:00:00
+B-1023,P-1023,A,Leo Martins,individual,2023-10-22,2026-03-31 00:00:00
+B-1024,P-1024,A,Mei Lin,individual,2018-01-12,2026-03-31 00:00:00
+B-1025,P-1025,A,Oskar Bergman,individual,2020-03-09,2026-03-31 00:00:00
+B-1027,P-1027,A,Greenfield Clinics,business,2017-04-30,2026-03-31 00:00:00
+B-1028,P-1028,A,Samir Qureshi,individual,2021-06-28,2026-03-31 00:00:00
+B-1029,P-1029,A,Clara Hoffmann,individual,2022-01-04,2026-03-31 00:00:00
+B-1030,P-1030,A,Apex Ventures Ltd,business,2018-08-17,2026-03-31 00:00:00
