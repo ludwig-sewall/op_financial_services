@@ -1,0 +1,31 @@
+version: 2
+models:
+- name: stg_financials__revenue_transactions
+  description: >-
+    One row per revenue posting. Amount is null when the posting failed to price. Renamed, typed and decoded;
+    one row per source row.
+  columns:
+  - name: transaction_id
+    data_tests:
+    - unique
+    - not_null
+  - name: party_key
+    data_tests:
+    - not_null
+  - name: revenue_month
+  - name: amount
+  - name: loaded_at
+- name: stg_financials__allocated_costs
+  description: >-
+    One row per party per month. Cost is null when finance has not allocated yet. Renamed, typed and decoded;
+    one row per source row.
+  columns:
+  - name: allocation_id
+    data_tests:
+    - unique
+    - not_null
+  - name: party_key
+    data_tests:
+    - not_null
+  - name: cost_month
+  - name: cost
