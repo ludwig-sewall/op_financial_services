@@ -1,0 +1,77 @@
+version: 2
+models:
+- name: stg_insurance__customers
+  description: One row per insurance customer. Renamed, typed and decoded; one row per source row.
+  columns:
+  - name: insurance_customer_id
+    data_tests:
+    - unique
+    - not_null
+  - name: party_key
+    data_tests:
+    - unique
+    - not_null
+  - name: customer_status
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - active
+          - inactive
+          - closed
+  - name: full_name
+  - name: loaded_at
+- name: stg_insurance__policies
+  description: >-
+    One row per policy. Only active policies count toward holdings and premium. Renamed, typed and decoded;
+    one row per source row.
+  columns:
+  - name: policy_id
+    data_tests:
+    - unique
+    - not_null
+  - name: insurance_customer_id
+    data_tests:
+    - not_null
+  - name: policy_status
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - active
+          - lapsed
+          - cancelled
+  - name: annual_premium
+  - name: product_name
+  - name: start_date
+  - name: sum_insured
+- name: stg_insurance__claims
+  description: >-
+    One row per claim. Open claims have no settled_date or payment. Renamed, typed and decoded; one row
+    per source row.
+  columns:
+  - name: claim_id
+    data_tests:
+    - unique
+    - not_null
+  - name: policy_id
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('stg_insurance__policies')
+          field: policy_id
+  - name: loss_date
+  - name: reported_date
+  - name: claim_status
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - open
+          - settled
+          - denied
+  - name: claimed_amount
+  - name: paid_amount
+    data_tests:
+    - platform.non_negative
+  - name: settled_date
