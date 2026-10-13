@@ -1,0 +1,241 @@
+version: 2
+models:
+- name: dim_insurance_customers
+  description: >-
+    Public insurance customer. Grain is one row per insurance customer; party_key lines this book up with
+    banking and wealth.
+  config:
+    access: public
+    contract:
+      enforced: true
+  columns:
+  - name: insurance_customer_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+    - dbt_expectations.expect_column_values_to_match_regex:
+        arguments:
+          regex: ^I-[0-9]{4}$
+  - name: party_key
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+  - name: customer_status
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - not_null
+    - accepted_values:
+        arguments:
+          values:
+          - active
+          - inactive
+          - closed
+- name: dim_insurance_policies
+  description: Public policy with claims experience and loss ratio.
+  config:
+    access: public
+    contract:
+      enforced: true
+  columns:
+  - name: policy_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+  - name: insurance_customer_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('dim_insurance_customers')
+          field: insurance_customer_id
+  - name: product_name
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: policy_status
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: start_date
+    data_type: date
+    constraints:
+    - type: not_null
+  - name: annual_premium
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: sum_insured
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: claim_count
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: open_claim_count
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: paid_claims
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: incurred_claims
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: loss_ratio
+    description: Incurred claims over annual premium.
+    data_type: numeric(18,4)
+- name: fct_insurance_holdings
+  description: >-
+    Public in-force cover for each insurance customer. Lapsed and cancelled policies drop out.
+  config:
+    access: public
+    contract:
+      enforced: true
+  data_tests:
+  - dbt_utils.equal_rowcount:
+      arguments:
+        compare_model: ref('dim_insurance_customers')
+  columns:
+  - name: insurance_customer_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_insurance_customers')
+          field: insurance_customer_id
+  - name: active_policy_count
+    description: Policies currently in force.
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: annual_premium
+    description: Annual premium on in-force policies.
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+- name: fct_insurance_claims
+  description: Public claim fact.
+  config:
+    access: public
+    contract:
+      enforced: true
+  data_tests:
+  - dbt_utils.expression_is_true:
+      description: A claim cannot pay out more than was claimed.
+      arguments:
+        expression: paid_amount <= claimed_amount
+  columns:
+  - name: claim_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+  - name: policy_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('dim_insurance_policies')
+          field: policy_id
+  - name: insurance_customer_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: product_name
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: loss_date
+    data_type: date
+    constraints:
+    - type: not_null
+  - name: reported_date
+    data_type: date
+    constraints:
+    - type: not_null
+  - name: reported_month
+    data_type: date
+    constraints:
+    - type: not_null
+  - name: claim_status
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: claimed_amount
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: paid_amount
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: open_reserve
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: days_to_report
+    data_type: integer
+    constraints:
+    - type: not_null
+    data_tests:
+    - platform.non_negative
+  - name: days_to_settle
+    data_type: integer
+    data_tests:
+    - platform.non_negative
+- name: fct_insurance_product_loss_ratio
+  description: Public loss ratio by product line.
+  config:
+    access: public
+    contract:
+      enforced: true
+  columns:
+  - name: product_name
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+  - name: policy_count
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: active_policy_count
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: written_premium
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: incurred_claims
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: loss_ratio
+    data_type: numeric(18,4)
