@@ -1,0 +1,81 @@
+version: 2
+models:
+- name: stg_wealth__clients
+  description: >-
+    One row per wealth client. Client ids are not banking or insurance ids. Renamed, typed and decoded;
+    one row per source row.
+  columns:
+  - name: wealth_customer_id
+    description: Wealth client key (client_id in the source).
+    data_tests:
+    - unique
+    - not_null
+  - name: party_key
+    data_tests:
+    - unique
+    - not_null
+  - name: client_status
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - active
+          - inactive
+          - closed
+  - name: full_name
+  - name: loaded_at
+- name: stg_wealth__portfolios
+  description: >-
+    One row per portfolio. Open market value is assets under management. Renamed, typed and decoded; one
+    row per source row.
+  columns:
+  - name: portfolio_id
+    data_tests:
+    - unique
+    - not_null
+  - name: wealth_customer_id
+    data_tests:
+    - not_null
+  - name: portfolio_status
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - open
+          - closed
+  - name: market_value
+  - name: portfolio_name
+  - name: risk_profile
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - conservative
+          - balanced
+          - aggressive
+  - name: opened_date
+- name: stg_wealth__trades
+  description: >-
+    One row per executed trade with its fee. Renamed, typed and decoded; one row per source row.
+  columns:
+  - name: trade_id
+    data_tests:
+    - unique
+    - not_null
+  - name: portfolio_id
+    data_tests:
+    - not_null
+  - name: trade_date
+  - name: trade_side
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - buy
+          - sell
+  - name: amount
+    data_tests:
+    - platform.non_negative
+  - name: fee
+    data_tests:
+    - platform.non_negative
