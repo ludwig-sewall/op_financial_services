@@ -1,0 +1,25 @@
+# Platform project: shared macros and generic tests for every project in this repo.
+# Domain projects install it as a local package (dependencies.yml -> ../platform) and call
+# macros as platform.<macro>(). It also runs as its own dbt platform project (op_platform)
+# so the macros are tested in CI before anyone depends on a change.
+name: "platform"
+version: "1.0.0"
+config-version: 2
+profile: "op_platform"
+
+require-dbt-version: [">=1.10.0", "<3.0.0"]
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  as_of_date: "2026-03-31"
+
+models:
+  platform:
+    marts:
+      +schema: marts
+      +materialized: table
