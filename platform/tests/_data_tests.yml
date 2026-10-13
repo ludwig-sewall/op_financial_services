@@ -1,0 +1,11 @@
+version: 2
+
+data_tests:
+  - name: assert_calendar_is_complete
+    description: dim_calendar has exactly one row per day in its range.
+  - name: assert_date_macros
+    description: add_months, month_start, days_between, minutes_between and as_of_date return the expected values.
+  - name: assert_value_macros
+    description: safe_divide, money, decode_status and anonymize behave as documented.
+  - name: assert_public_models_not_empty
+    description: Templated with a Jinja loop; fails for any public model in this project that is empty.
