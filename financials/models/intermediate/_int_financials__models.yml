@@ -1,0 +1,75 @@
+version: 2
+models:
+- name: int_revenue_transactions__monthly
+  description: >-
+    Monthly revenue at party grain. Null revenue means every posting that month failed to price.
+  data_tests:
+  - dbt_utils.unique_combination_of_columns:
+      description: 'Grain: one row per party_key, revenue_month.'
+      arguments:
+        combination_of_columns:
+        - party_key
+        - revenue_month
+  columns:
+  - name: party_key
+    data_tests:
+    - not_null
+- name: int_allocated_costs__monthly
+  description: Monthly allocated cost at party grain. Null cost means no allocation yet.
+  data_tests:
+  - dbt_utils.unique_combination_of_columns:
+      description: 'Grain: one row per party_key, cost_month.'
+      arguments:
+        combination_of_columns:
+        - party_key
+        - cost_month
+  columns:
+  - name: party_key
+    data_tests:
+    - not_null
+- name: int_customer_months__coverage
+  description: Every party-month with revenue or cost, flagged complete when both exist.
+  data_tests:
+  - dbt_utils.unique_combination_of_columns:
+      description: 'Grain: one row per party_key, month.'
+      arguments:
+        combination_of_columns:
+        - party_key
+        - month
+  columns:
+  - name: party_key
+    data_tests:
+    - not_null
+unit_tests:
+- name: test_month_is_complete_only_with_revenue_and_cost
+  model: int_customer_months__coverage
+  given:
+  - input: ref('int_revenue_transactions__monthly')
+    rows:
+    - party_key: P
+      revenue_month: '2026-01-01'
+      revenue: 100
+      unpriced_postings: 0
+    - party_key: P
+      revenue_month: '2026-02-01'
+      revenue: null
+      unpriced_postings: 1
+  - input: ref('int_allocated_costs__monthly')
+    rows:
+    - party_key: P
+      cost_month: '2026-01-01'
+      cost: 40
+    - party_key: P
+      cost_month: '2026-03-01'
+      cost: 40
+  expect:
+    rows:
+    - party_key: P
+      month: '2026-01-01'
+      is_complete: true
+    - party_key: P
+      month: '2026-02-01'
+      is_complete: false
+    - party_key: P
+      month: '2026-03-01'
+      is_complete: false
