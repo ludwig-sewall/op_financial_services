@@ -1,0 +1,44 @@
+{
+  "use_case": "financial_services",
+  "title": "Financial services",
+  "repo": "op_financial_services",
+  "projects": [
+    {
+      "key": "platform",
+      "subdirectory": "platform",
+      "depends_on": []
+    },
+    {
+      "key": "banking",
+      "subdirectory": "banking",
+      "depends_on": []
+    },
+    {
+      "key": "insurance",
+      "subdirectory": "insurance",
+      "depends_on": []
+    },
+    {
+      "key": "wealth",
+      "subdirectory": "wealth",
+      "depends_on": []
+    },
+    {
+      "key": "financials",
+      "subdirectory": "financials",
+      "depends_on": []
+    },
+    {
+      "key": "group_analytics",
+      "subdirectory": "group_analytics",
+      "depends_on": [
+        "banking",
+        "insurance",
+        "wealth",
+        "financials"
+      ]
+    }
+  ],
+  "raw_data": "raw_data",
+  "enable_pages": true
+}
