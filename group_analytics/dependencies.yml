@@ -1,0 +1,13 @@
+packages:
+  # Packages from hub.getdbt.com: generic tests (dbt_utils, dbt_expectations).
+  - package: dbt-labs/dbt_utils
+    version: [">=1.3.0", "<2.0.0"]
+  - package: metaplane/dbt_expectations
+    version: [">=0.10.0", "<0.11.0"]
+  - local: ../platform
+
+projects:
+  - name: "op_banking"
+  - name: "op_insurance"
+  - name: "op_wealth"
+  - name: "op_financials"
