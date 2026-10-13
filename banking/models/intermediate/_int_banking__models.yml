@@ -1,0 +1,76 @@
+version: 2
+models:
+- name: int_banking_accounts__open_by_customer
+  description: Open accounts per banking customer.
+  columns:
+  - name: banking_customer_id
+    data_tests:
+    - unique
+    - not_null
+- name: int_banking_loans__outstanding_by_customer
+  description: Outstanding loans and principal per banking customer.
+  columns:
+  - name: banking_customer_id
+    data_tests:
+    - unique
+    - not_null
+- name: int_banking_transactions__monthly_by_account
+  description: Transactions rolled up to account and month.
+  data_tests:
+  - dbt_utils.unique_combination_of_columns:
+      description: 'Grain: one row per account_id, transaction_month.'
+      arguments:
+        combination_of_columns:
+        - account_id
+        - transaction_month
+  columns:
+  - name: account_id
+    data_tests:
+    - not_null
+- name: int_banking_loan_repayments__by_loan
+  description: 'Repayment behaviour per loan: missed and late instalments, arrears and days past due.'
+  columns:
+  - name: loan_id
+    data_tests:
+    - unique
+    - not_null
+unit_tests:
+- name: test_missed_instalments_drive_days_past_due
+  description: >-
+    Unpaid instalments count as missed and days past due runs from the oldest unpaid due date.
+  model: int_banking_loan_repayments__by_loan
+  given:
+  - input: ref('stg_banking__loan_repayments')
+    rows:
+    - repayment_id: R1
+      loan_id: L
+      due_date: '2026-01-15'
+      paid_date: '2026-01-14'
+      amount_due: 100
+      amount_paid: 100
+    - repayment_id: R2
+      loan_id: L
+      due_date: '2026-02-15'
+      paid_date: null
+      amount_due: 100
+      amount_paid: 0
+    - repayment_id: R3
+      loan_id: L
+      due_date: '2026-03-15'
+      paid_date: null
+      amount_due: 100
+      amount_paid: 0
+    - repayment_id: R4
+      loan_id: L
+      due_date: '2026-04-15'
+      paid_date: null
+      amount_due: 100
+      amount_paid: 0
+  expect:
+    rows:
+    - loan_id: L
+      instalments_due: 3
+      instalments_missed: 2
+      instalments_late: 0
+      arrears_amount: 200
+      days_past_due: 44
