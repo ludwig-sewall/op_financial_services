@@ -1,0 +1,6 @@
+exit_id,banking_customer_id,exit_date,exit_reason
+EX-01,B-1005,2025-09-30,moved_to_competitor
+EX-02,B-1009,2026-02-15,account_frozen
+EX-03,B-1010,2025-12-31,business_closed
+EX-04,B-1018,2026-01-31,inactive_closed
+EX-05,B-1022,2025-11-30,moved_abroad
