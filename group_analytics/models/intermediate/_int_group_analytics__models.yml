@@ -1,0 +1,69 @@
+version: 2
+models:
+- name: int_customer_360__banking
+  description: Banking relationship per party.
+  columns:
+  - name: party_key
+    data_tests:
+    - unique
+    - not_null
+- name: int_customer_360__insurance
+  description: Insurance relationship per party.
+  columns:
+  - name: party_key
+    data_tests:
+    - unique
+    - not_null
+- name: int_customer_360__wealth
+  description: Wealth relationship per party.
+  columns:
+  - name: party_key
+    data_tests:
+    - unique
+    - not_null
+- name: int_customer_360__financials
+  description: Profitability per party.
+  columns:
+  - name: party_key
+    data_tests:
+    - unique
+    - not_null
+- name: int_customer_monthly__banking
+  description: Banking net flow per party and month.
+  data_tests:
+  - dbt_utils.unique_combination_of_columns:
+      description: 'Grain: one row per party_key, activity_month.'
+      arguments:
+        combination_of_columns:
+        - party_key
+        - activity_month
+  columns:
+  - name: party_key
+    data_tests:
+    - not_null
+- name: int_customer_monthly__insurance
+  description: Claims per party and month.
+  data_tests:
+  - dbt_utils.unique_combination_of_columns:
+      description: 'Grain: one row per party_key, activity_month.'
+      arguments:
+        combination_of_columns:
+        - party_key
+        - activity_month
+  columns:
+  - name: party_key
+    data_tests:
+    - not_null
+- name: int_customer_monthly__wealth
+  description: Wealth net investment and fees per party and month.
+  data_tests:
+  - dbt_utils.unique_combination_of_columns:
+      description: 'Grain: one row per party_key, activity_month.'
+      arguments:
+        combination_of_columns:
+        - party_key
+        - activity_month
+  columns:
+  - name: party_key
+    data_tests:
+    - not_null
