@@ -1,0 +1,33 @@
+version: 2
+sources:
+- name: insurance
+  description: Policy admin and claims (RAW_INSURANCE). Customers are keyed to the group party.
+  schema: raw_insurance
+  tables:
+  - name: customers
+    description: One row per insurance customer.
+    config:
+      loaded_at_field: loaded_at
+      freshness:
+        warn_after:
+          count: 100000
+          period: hour
+    columns:
+    - name: insurance_customer_id
+      data_tests:
+      - unique
+      - not_null
+  - name: policies
+    description: One row per policy. Only active policies count toward holdings and premium.
+    columns:
+    - name: policy_id
+      data_tests:
+      - unique
+      - not_null
+  - name: claims
+    description: One row per claim. Open claims have no settled_date or payment.
+    columns:
+    - name: claim_id
+      data_tests:
+      - unique
+      - not_null
