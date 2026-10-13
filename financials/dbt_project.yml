@@ -1,0 +1,33 @@
+name: "op_financials"
+version: "1.0.0"
+config-version: 2
+profile: "op_financials"
+
+require-dbt-version: [">=1.10.0", "<3.0.0"]
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  as_of_date: "2026-03-31"
+
+models:
+  op_financials:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      +schema: marts
+      +materialized: table
+      +access: protected
+  # The platform package only lends its macros; its own models and tests run in op_platform.
+  platform:
+    +enabled: false
+
+data_tests:
+  platform:
+    +enabled: false
