@@ -1,0 +1,51 @@
+version: 2
+models:
+- name: int_insurance_policies__active_by_customer
+  description: In-force policies and premium per insurance customer.
+  columns:
+  - name: insurance_customer_id
+    data_tests:
+    - unique
+    - not_null
+- name: int_insurance_claims__lifecycle
+  description: Claims with reporting and settlement lags and the open reserve.
+  columns:
+  - name: claim_id
+    data_tests:
+    - unique
+    - not_null
+- name: int_insurance_claims__by_policy
+  description: Claims experience per policy (paid and incurred).
+  columns:
+  - name: policy_id
+    data_tests:
+    - unique
+    - not_null
+unit_tests:
+- name: test_incurred_is_paid_plus_open_reserve
+  given:
+  - input: ref('int_insurance_claims__lifecycle')
+    rows:
+    - claim_id: C1
+      policy_id: P
+      claim_status: settled
+      paid_amount: 800
+      open_reserve: 0
+    - claim_id: C2
+      policy_id: P
+      claim_status: open
+      paid_amount: 0
+      open_reserve: 1500
+    - claim_id: C3
+      policy_id: P
+      claim_status: denied
+      paid_amount: 0
+      open_reserve: 0
+  expect:
+    rows:
+    - policy_id: P
+      claim_count: 3
+      open_claim_count: 1
+      paid_claims: 800
+      incurred_claims: 2300
+  model: int_insurance_claims__by_policy
