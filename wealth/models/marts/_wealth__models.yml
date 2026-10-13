@@ -1,0 +1,204 @@
+version: 2
+models:
+- name: dim_wealth_customers
+  description: >-
+    Public wealth client. Grain is one row per client. party_key lines this book up with banking and insurance.
+  config:
+    access: public
+    contract:
+      enforced: true
+  columns:
+  - name: wealth_customer_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+    - dbt_expectations.expect_column_values_to_match_regex:
+        arguments:
+          regex: ^W-[0-9]{4}$
+  - name: party_key
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+  - name: client_status
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - not_null
+    - accepted_values:
+        arguments:
+          values:
+          - active
+          - inactive
+          - closed
+- name: dim_wealth_portfolios
+  description: Public portfolio with risk profile, trading and fee yield.
+  config:
+    access: public
+    contract:
+      enforced: true
+  columns:
+  - name: portfolio_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+  - name: wealth_customer_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('dim_wealth_customers')
+          field: wealth_customer_id
+  - name: portfolio_name
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: portfolio_status
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: risk_profile
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: opened_date
+    data_type: date
+    constraints:
+    - type: not_null
+  - name: market_value
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: trade_count_12m
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: fees_12m
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: fee_yield
+    data_type: numeric(18,6)
+- name: fct_wealth_holdings
+  description: Public holdings per wealth client. Closed portfolios drop out of the count and assets.
+  config:
+    access: public
+    contract:
+      enforced: true
+  data_tests:
+  - dbt_utils.equal_rowcount:
+      arguments:
+        compare_model: ref('dim_wealth_customers')
+  columns:
+  - name: wealth_customer_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('dim_wealth_customers')
+          field: wealth_customer_id
+  - name: portfolio_count
+    description: Open portfolios.
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: assets_under_management
+    description: Market value of open portfolios.
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+- name: fct_wealth_portfolio_monthly
+  description: Public monthly trading and fees per portfolio.
+  config:
+    access: public
+    contract:
+      enforced: true
+  columns:
+  - name: portfolio_month_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+  - name: portfolio_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - relationships:
+        arguments:
+          to: ref('dim_wealth_portfolios')
+          field: portfolio_id
+  - name: wealth_customer_id
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: trade_month
+    data_type: date
+    constraints:
+    - type: not_null
+  - name: trade_count
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: buy_amount
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: sell_amount
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: net_investment
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: fees
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+- name: fct_wealth_risk_allocation
+  description: Public AUM split by risk profile.
+  config:
+    access: public
+    contract:
+      enforced: true
+  columns:
+  - name: risk_profile
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+  - name: open_portfolios
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: assets_under_management
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: share_of_aum
+    data_type: numeric(18,4)
+    data_tests:
+    - platform.in_range:
+        arguments:
+          min_value: 0
+          max_value: 1
