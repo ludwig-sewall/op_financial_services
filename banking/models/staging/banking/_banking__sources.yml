@@ -1,0 +1,56 @@
+version: 2
+sources:
+- name: banking
+  description: >-
+    Core banking book (RAW_BANKING): customers, deposit and card accounts, transactions, loans and repayments.
+  schema: raw_banking
+  tables:
+  - name: customers
+    description: >-
+      One row per banking customer. party_key is the group identifier shared with insurance and wealth.
+    config:
+      loaded_at_field: loaded_at
+      freshness:
+        warn_after:
+          count: 100000
+          period: hour
+    columns:
+    - name: banking_customer_id
+      data_tests:
+      - unique
+      - not_null
+  - name: customer_exits
+    description: Relationship exits recorded by the retention team, with reason.
+    columns:
+    - name: exit_id
+      data_tests:
+      - unique
+      - not_null
+  - name: accounts
+    description: One row per deposit or card account. Closed accounts stay in the book.
+    columns:
+    - name: account_id
+      data_tests:
+      - unique
+      - not_null
+  - name: transactions
+    description: One row per posted account transaction.
+    columns:
+    - name: transaction_id
+      data_tests:
+      - unique
+      - not_null
+  - name: loans
+    description: One row per loan facility.
+    columns:
+    - name: loan_id
+      data_tests:
+      - unique
+      - not_null
+  - name: loan_repayments
+    description: Scheduled monthly instalments; paid_date is null when the instalment was missed.
+    columns:
+    - name: repayment_id
+      data_tests:
+      - unique
+      - not_null
