@@ -1,0 +1,203 @@
+version: 2
+models:
+- name: fct_customer_profitability_monthly
+  description: >-
+    Public monthly profit. Grain is party and month; only months with both priced revenue and allocated
+    cost are included.
+  config:
+    access: public
+    contract:
+      enforced: true
+  data_tests:
+  - dbt_utils.unique_combination_of_columns:
+      description: 'Grain: one row per party_key, month.'
+      arguments:
+        combination_of_columns:
+        - party_key
+        - month
+  - dbt_utils.expression_is_true:
+      arguments:
+        expression: profit = revenue - cost
+  columns:
+  - name: party_key
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - not_null
+  - name: month
+    data_type: date
+    constraints:
+    - type: not_null
+    data_tests:
+    - not_null
+  - name: revenue
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+    data_tests:
+    - not_null
+  - name: cost
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+    data_tests:
+    - not_null
+  - name: profit
+    description: Revenue minus cost for the same party-month.
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+    data_tests:
+    - not_null
+- name: fct_customer_profitability_trailing
+  description: Public rolling 3- and 12-month profit per party.
+  config:
+    access: public
+    contract:
+      enforced: true
+  data_tests:
+  - dbt_utils.unique_combination_of_columns:
+      description: 'Grain: one row per party_key, month.'
+      arguments:
+        combination_of_columns:
+        - party_key
+        - month
+  columns:
+  - name: party_key
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: month
+    data_type: date
+    constraints:
+    - type: not_null
+  - name: profit
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: trailing_3m_profit
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: trailing_12m_profit
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+- name: fct_customer_profitability_summary
+  description: Public lifetime profitability per party with margin and band.
+  config:
+    access: public
+    contract:
+      enforced: true
+  columns:
+  - name: party_key
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - unique
+    - not_null
+  - name: profit_months
+    data_type: integer
+    constraints:
+    - type: not_null
+  - name: total_revenue
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: total_cost
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+  - name: total_profit
+    data_type: numeric(18,2)
+    constraints:
+    - type: not_null
+    data_tests:
+    - platform.sums_match:
+        arguments:
+          compare_model: ref('fct_customer_profitability_monthly')
+          compare_column: profit
+  - name: profit_margin
+    data_type: numeric(18,4)
+  - name: profit_band
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - loss_making
+          - low
+          - medium
+          - high
+- name: fct_profitability_data_gaps
+  description: Public list of party-months excluded from profitability, with the reason.
+  config:
+    access: public
+    contract:
+      enforced: true
+  data_tests:
+  - dbt_utils.unique_combination_of_columns:
+      description: 'Grain: one row per party_key, month.'
+      arguments:
+        combination_of_columns:
+        - party_key
+        - month
+  columns:
+  - name: party_key
+    data_type: varchar
+    constraints:
+    - type: not_null
+  - name: month
+    data_type: date
+    constraints:
+    - type: not_null
+  - name: gap_type
+    data_type: varchar
+    constraints:
+    - type: not_null
+    data_tests:
+    - accepted_values:
+        arguments:
+          values:
+          - unpriced_revenue
+          - missing_revenue
+          - missing_cost
+- name: fct_customer_revenue_forecast
+  description: >-
+    Python model. Fits a straight line through each party's monthly revenue and predicts the next month.
+  config:
+    access: public
+  columns:
+  - name: party_key
+    description: One forecast row per party.
+    data_tests:
+    - unique
+    - not_null
+  - name: history_months
+    data_type: integer
+    data_tests:
+    - not_null
+  - name: last_month
+    data_type: date
+    data_tests:
+    - not_null
+  - name: forecast_month
+    data_type: date
+    data_tests:
+    - not_null
+  - name: last_revenue
+    data_type: numeric(18,2)
+    data_tests:
+    - not_null
+  - name: monthly_trend
+    data_type: numeric(18,2)
+    data_tests:
+    - not_null
+  - name: predicted_revenue
+    data_type: numeric(18,2)
+    data_tests:
+    - not_null
