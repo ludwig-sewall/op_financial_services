@@ -1,0 +1,84 @@
+version: 2
+
+models:
+  - name: dim_calendar
+    description: >
+      Day-grain calendar from 2024-01-01 to 2026-12-31, built with the platform date_spine
+      and month_start macros. Flags days up to the shared as_of_date.
+    config:
+      access: public
+      contract:
+        enforced: true
+    columns:
+      - name: date_day
+        data_type: date
+        constraints: [{type: not_null}]
+        data_tests: [unique, not_null]
+      - name: month_start
+        data_type: date
+        constraints: [{type: not_null}]
+      - name: calendar_year
+        data_type: integer
+        data_tests:
+          - platform.in_range:
+              arguments: {min_value: 2024, max_value: 2026}
+      - name: calendar_quarter
+        data_type: integer
+        data_tests:
+          - platform.in_range:
+              arguments: {min_value: 1, max_value: 4}
+      - name: calendar_month
+        data_type: integer
+      - name: is_reported
+        data_type: boolean
+      - name: is_as_of_date
+        data_type: boolean
+
+  - name: dim_calendar_months
+    description: Month-grain calendar derived from dim_calendar.
+    config:
+      access: public
+      contract:
+        enforced: true
+    data_tests:
+      - dbt_expectations.expect_table_row_count_to_be_between:
+          arguments: {min_value: 36, max_value: 36}
+    columns:
+      - name: month_start
+        data_type: date
+        constraints: [{type: not_null}]
+        data_tests: [unique, not_null]
+      - name: next_month_start
+        data_type: date
+        constraints: [{type: not_null}]
+      - name: calendar_year
+        data_type: integer
+      - name: calendar_quarter
+        data_type: integer
+      - name: days_in_month
+        data_type: integer
+        data_tests:
+          - dbt_utils.accepted_range:
+              arguments: {min_value: 28, max_value: 31}
+          - platform.sums_match:
+              description: Every calendar day is counted in exactly one month.
+              arguments:
+                compare_model: ref('dim_calendar')
+                compare_column: 1
+      - name: is_reported
+        data_type: boolean
+
+unit_tests:
+  - name: test_months_roll_up_days_and_reporting_flag
+    description: Days are counted per month and a month is reported if any of its days are.
+    model: dim_calendar_months
+    given:
+      - input: ref('dim_calendar')
+        rows:
+          - {date_day: 2026-02-27, month_start: 2026-02-01, calendar_year: 2026, calendar_quarter: 1, is_reported: true}
+          - {date_day: 2026-02-28, month_start: 2026-02-01, calendar_year: 2026, calendar_quarter: 1, is_reported: true}
+          - {date_day: 2026-04-01, month_start: 2026-04-01, calendar_year: 2026, calendar_quarter: 2, is_reported: false}
+    expect:
+      rows:
+        - {month_start: 2026-02-01, next_month_start: 2026-03-01, days_in_month: 2, is_reported: true}
+        - {month_start: 2026-04-01, next_month_start: 2026-05-01, days_in_month: 1, is_reported: false}
